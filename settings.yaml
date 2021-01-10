@@ -1,0 +1,18 @@
+insta_settings:
+    driver_path_win : "./chrome/chromedriver_win.exe"  # chorme path for windows
+    driver_path_mac : "./chrome/chromedriver_mac"  # chorme path for mac
+    driver_path_lin : "./chrome/chromedriver_linux"  # chorme path for linux
+    
+    login: False  # whether to login
+    insta_id: ""  # optional, if not login
+    insta_pw: ""  # optional, if not login
+
+    thres_links: 22  # threshold for spidering the links
+
+db_settings:
+    db_name: "example.db"  # database name
+    table_name: "exam"  # table
+    recreate: False  # whether to recreate table, if nothing in database folder will create your db and table automatically
+
+spider_settings:
+    insert_freq: 10  # insert every n batch data

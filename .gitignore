@@ -1,0 +1,10 @@
+chrome/chromedriver*
+database/*.db
+
+.vscode
+.ipynb_checkpoints
+__pycache__
+debug.log
+
+mysettings.yaml
+crawling.ipynb
