@@ -1,5 +1,6 @@
 chrome/chromedriver*
 database/*.db
+output/*
 
 .vscode
 .ipynb_checkpoints

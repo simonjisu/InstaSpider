@@ -25,15 +25,18 @@ $ pip install -r requirements.txt
     - for linux users: `./chrome/chromedriver_linux`
 2. Change your `settings.yaml`
     - Currently not supported for not login option, so should set `login=True`
-3. Change or write your own code, or try `example.py --test 1`
+3. Change or write your own code
     ```python
     from src import Spider
 
     tag = "food"
     sp = Spider("./settings.yaml")
+    # Get datas from Web -> database
     sp.main(tag)
+    # Extract datas from database -> output
+    sp.extract()
     ```
-4. Check you sqlite db, or try `example.py --test 2`
+4. Check you sqlite db
     ```python
     from src import Database, load_settings
 
@@ -43,6 +46,12 @@ $ pip install -r requirements.txt
     c = db.get_cursor()
     res = c.execute(sql).fetchall()
     c.close()
+    ```
+5. Or you can try some presets:
+    ```bash
+    $ example.py --test 1 --settings_path ./settings.yaml --tags food drink
+    # or
+    $ example.py --test 2 --settings_path ./settings.yaml 
     ```
 
 # License
