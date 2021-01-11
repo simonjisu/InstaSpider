@@ -44,22 +44,24 @@ class Instagram:
         options = webdriver.ChromeOptions()
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
         if kwargs["driver_no_sandbox"]:
-            options.add_argument('--no-sandbox')
+            options.add_argument("--no-sandbox")
+        if kwargs["driver_headless"]:
+            options.add_argument("--headless")
         # options.add_argument('--disable-dev-shm-usage')
         # options.add_argument("user-agent=Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko")
 
         self.driver = webdriver.Chrome(chrome_p, options=options)
         self.thres_links = kwargs["thres_links"]
-        if kwargs["login"]:
-            print("[INFO] Trying to Login...")
-            # TODO: 
-            # write a check function to whether it is verified email
-            # of only has one of id / pw
-            insta_id = kwargs["insta_id"] 
-            insta_pw = kwargs["insta_pw"]
-            self.login(insta_id, insta_pw)
+        # Force to login: if kwargs["login"]:
+        print("[INFO] Trying to Login...")
+        # TODO: 
+        # write a check function to whether it is verified email
+        # of only has one of id / pw
+        insta_id = kwargs["insta_id"] 
+        insta_pw = kwargs["insta_pw"]
+        self.login(insta_id, insta_pw)
             
-            print("[INFO] Done!")
+        print("[INFO] Done!")
 
     def login(self, insta_id: str, insta_pw: str):
         r"""login to instagram

@@ -4,9 +4,9 @@ insta_settings:
     driver_path_lin : "./chrome/chromedriver_linux"  # chorme path for linux
     driver_no_sandbox: True  # If True, not open the chrome window
 
-    login: True  # whether to login
-    insta_id: ""  # optional, if not login
-    insta_pw: ""  # optional, if not login
+    # login: True  # force to login right now
+    insta_id: ""  # must login
+    insta_pw: ""  # must login
 
     thres_links: 22  # threshold for spidering the links
 

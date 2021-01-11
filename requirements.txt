@@ -1,0 +1,5 @@
+beautifulsoup4 
+PyYAML >=5.*
+selenium >=3.*
+sqlite >=3.*
+tqdm

@@ -11,6 +11,12 @@ sqlite
 tqdm
 ```
 
+**Installation**
+
+```bash
+$ pip install -r requirements.txt
+```
+
 # Usage
 
 1. Download the Chrome driver from [link](https://chromedriver.chromium.org/downloads) and change driver name and put into `chrome` folder as followings:
