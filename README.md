@@ -54,6 +54,30 @@ $ pip install -r requirements.txt
     $ example.py --test 2 --settings_path ./settings.yaml 
     ```
 
+## Extraction from database
+
+You can extract data from your database, the folder structure of `output` is like following:
+
+* `tag{x}`: searched tags
+* `id{x}_date_likes`: unique database id + date + likes
+* `info.txt`: contains the post text and hashtags, it can be possible that there is no hashtags or post
+* `{x}.jpg`: images of the post (can be multiple)
+
+```bash
+InstaSpider
+├── chorme
+├── database
+├── src
+└── output
+     ├── tag1  
+     │    ├── id1_date_likes  # databaseId + date + likes
+     │    │     ├── info.txt (post, hashtags)
+     │    │     ├── 1.jpg
+     │    │     └── 2.jpg
+     │    └── id2_date_likes
+     └── tag2  # searched tag 2
+```
+
 # License
 
 MIT License
