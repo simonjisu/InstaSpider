@@ -2,7 +2,8 @@ insta_settings:
     driver_path_win : "./chrome/chromedriver_win.exe"  # chorme path for windows
     driver_path_mac : "./chrome/chromedriver_mac"  # chorme path for mac
     driver_path_lin : "./chrome/chromedriver_linux"  # chorme path for linux
-    driver_no_sandbox: True  # If True, not open the chrome window
+    driver_no_sandbox: False  # set it True for not GUI user
+    driver_headless: False  # set it True if you want no Chrome window
 
     # login: True  # force to login right now
     insta_id: ""  # must login
