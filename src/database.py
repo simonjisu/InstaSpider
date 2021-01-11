@@ -5,7 +5,6 @@ class Database:
     def __init__(self, **kwargs):
         self.db_name = "./database/" + kwargs["db_name"]
         self.table_name = kwargs["table_name"]
-        self.recreate = kwargs["recreate"]
         self.start()
         self.create_table()
 
@@ -29,22 +28,20 @@ class Database:
         c = self.get_cursor()
         res = c.execute(f"SELECT COUNT(*) FROM sqlite_master WHERE name='{self.table_name}'")
         exist = res.fetchone()[0]
-        if (exist == 0) and (not self.recreate):
+        if exist == 0:
             c.execute(sql)
             print(f"[INFO] Table: {self.table_name} created.")
-        elif (exist == 0) and (self.recreate):
-            raise Exception("Table not exists, cannot recreate.")
-        elif (exist == 1) and (self.recreate):
-            c.execute(f"DROP TABLE {self.table_name}")
-            c.execute(sql)
-            print(f"[INFO] Table: {self.table_name} recreated.")
-        else:  
-            # (exist == 1) and (not recreate)
-            # means don't need to create table
+        else:
             print(f"[INFO] Table: {self.table_name} exists.")
-            pass
         c.close()
     
+    def recreate(self):
+        c = self.get_cursor()
+        c.execute(f"DROP TABLE {self.table_name}")
+        print(f"[INFO] Table: {self.table_name} dropped.")
+        self.create_table()
+        c.close()
+
     def get_cursor(self):
         c = self.conn.cursor()
         return c
@@ -83,8 +80,4 @@ class Database:
             WHERE id = (SELECT MAX(id) FROM {self.table_name})"""
         c = self.get_cursor()
         res = c.execute(sql).fetchall()
-        return res 
-
-    def extract_to_folder(self):
-        # TODO: extract all datas to a folder
-        pass
+        return res
