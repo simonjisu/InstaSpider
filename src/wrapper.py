@@ -18,7 +18,7 @@ class Spider:
         links = insta.collect_links(tag)
         
         table_idx = db.get_last_id()
-        table_idx = table_idx[0] if table_idx else 0
+        table_idx = table_idx[0][0] if table_idx else 0
         
         pbar = tqdm(enumerate(insta.get_data(links), 1),
             desc="Getting data", total=len(links))

@@ -2,8 +2,9 @@ insta_settings:
     driver_path_win : "./chrome/chromedriver_win.exe"  # chorme path for windows
     driver_path_mac : "./chrome/chromedriver_mac"  # chorme path for mac
     driver_path_lin : "./chrome/chromedriver_linux"  # chorme path for linux
-    
-    login: False  # whether to login
+    driver_no_sandbox: True  # If True, not open the chrome window
+
+    login: True  # whether to login
     insta_id: ""  # optional, if not login
     insta_pw: ""  # optional, if not login
 

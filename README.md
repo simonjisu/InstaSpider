@@ -18,6 +18,7 @@ tqdm
     - for mac users: `./chrome/chromedriver_mac`
     - for linux users: `./chrome/chromedriver_linux`
 2. Change your `settings.yaml`
+    - Currently not supported for not login option, so should set `login=True`
 3. Change or write your own code, or try `example.py --test 1`
     ```python
     from src import Spider
