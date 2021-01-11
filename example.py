@@ -1,11 +1,11 @@
 
 # Get data
-def get_data(settings_path):
+def get_data(settings_path, tags):
     from src import Spider
 
-    tag = "food"
     sp = Spider(settings_path)
-    sp.main(tag)
+    sp.main(tags)
+    sp.extract()
 
 # Query
 def query(settings_path):
@@ -26,9 +26,11 @@ if __name__ == "__main__":
         help="1: get_data, 2: query")
     parser.add_argument("--settings_path", type=str, default="./settings.yaml",
         help="settings path")
+    parser.add_argument("--tags", nargs="+", default=["food", "drink"],
+        help="search tag")
     args = parser.parse_args()
     if args.test == 1:
-        get_data(args.settings_path)
+        get_data(args.settings_path, args.tags)
     elif args.test == 2:
         query(args.settings_path)
     else:
