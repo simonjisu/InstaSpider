@@ -26,6 +26,7 @@ class Instagram:
     INSTA_POSTS_LEN = 3
     INSTA_FIRST_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button'
     INSTA_NEXT_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button[2]'
+    INSTA_POST_IMG_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div/div[1]/div[1]'
     ATTRS_SAVE_INFO = "cmbtv"
     ATTRS_ALRAM_OFF = "mt3GC"
     INSTA_SAVE_INFO_LATER_XPATH = '//*[@id="react-root"]/section/main/div/div/div/div/button'
@@ -81,9 +82,9 @@ class Instagram:
         except:
             raise Exception("Cannot find XPATH, set `DRIVER_WAIT_TIME` longer")
 
-        id_input = self.driver.find_element_by_xpath(self.LOGIN_ID_XPATH)
+        id_input = self.driver.find_element(By.XPATH, self.LOGIN_ID_XPATH)
         id_input.send_keys(insta_id)
-        pw_input = self.driver.find_element_by_xpath(self.LOGIN_PW_XPATH)
+        pw_input = self.driver.find_element(By.XPATH, self.LOGIN_PW_XPATH)
         pw_input.send_keys(insta_pw)
         pw_input.submit()
         sleep(5)
@@ -115,7 +116,7 @@ class Instagram:
         sleep(self.SLEEP_TIME)
 
     def click_button(self, xpath: str):    
-        self.driver.find_element_by_xpath(xpath).click()
+        self.driver.find_element(By.XPATH, xpath).click()
         sleep(self.SLEEP_TIME)
 
     def close(self):
@@ -179,6 +180,13 @@ class Instagram:
         for i in range(len(links)):
             post_link = f"https://www.instagram.com/{links[i]}"
             self.get_link(post_link)
+            try:
+                username_box_check = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, self.ATTRS_IMG))
+                )
+            except:
+                raise Exception("Cannot find XPATH, set `DRIVER_WAIT_TIME` longer")
+
             soup = self.get_soup()
 
             # user_id
