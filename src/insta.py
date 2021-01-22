@@ -173,6 +173,7 @@ class Instagram:
                     
                 else:
                     last_height = new_height
+                    sleep(self.SLEEP_TIME)
                     continue
         pbar.close()
         return links
