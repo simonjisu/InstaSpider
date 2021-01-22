@@ -70,8 +70,8 @@ InstaSpider
 ├── src
 └── output
      ├── tag1  
-     │    ├── id1_date_likes  # databaseId + date + likes
-     │    │     ├── info.txt (post, hashtags)
+     │    ├── id1  # databaseId
+     │    │     ├── info.txt (uid, date, likes, postlink, post, hashtags)
      │    │     ├── 1.jpg
      │    │     └── 2.jpg
      │    └── id2_date_likes

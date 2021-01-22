@@ -20,5 +20,6 @@ spider_settings:
     output_path: "./output"  # extract the image and data path
     img_fmt: ".jpg"  # output image format
 
-    recreate: False  # whether to force recreate database table at the first time
-    stage: 0  # 0: run all / 1: run only `get_links` / 2: run only `get_data`, from exists links file 
+    recreate: False  # whether to force recreate database table at the first time, please set it False when doing continue process(e.x. when borken down)
+    stage: 2  # 0: run all / 1: run only `get_links` / 2: run only `get_data`, from exists links file 
+    only_extract: False  # only extract mode, it will not create the `Instagram` object(not open Chrome).
