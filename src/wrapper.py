@@ -17,15 +17,45 @@ class Spider:
 
         self.db = Database(**self.conf_db)
         self.insta = Instagram(**self.conf_insta)
+        self.stage = self.conf_spider["stage"]
         if self.conf_spider["recreate"]:
             self.db.recreate()
     
-    def run(self, tag: str):
+    def run(self, tag: str, stage=0):
+        """Run the scripts for single tag.
+
+        Args:
+            tag (str): hashtag to search
+            stage (int, optional): run mode. Defaults to 0.
+                0: run all 
+                1: run only `get_links` 
+                2: run only `get_data`, from exists links file 
+        """        
+        output_path = Path(self.conf_spider["output_path"])
+        if stage == 0:
+            self._run_get_links(tag, output_path)
+            self._run_get_data(output_path)
+        elif stage == 1:
+            self._run_get_links(tag, output_path)
+        elif stage == 2:
+            self._run_get_links(output_path)
+        else:
+            raise Exception("[Error] Should insert `stage`")
+
+    def _run_get_links(self, tag: str, output_path: Path):
         links = self.insta.collect_links(tag)
-   
+        with (output_path / "links.txt").open("w", encoding="utf-8") as file:
+            for l in links:
+                print(l, file=file)
+
+    def _run_get_data(self, output_path: Path):
+        with output_path.open("r", encoding="utf-8") as file:
+            links = [x.strip() for x in output_path.readlines()]
+        
         table_idx = self.db.get_last_id()
         table_idx = table_idx[0][0] if table_idx else 0
-        
+        links = links[table_idx:]
+
         pbar = tqdm(enumerate(self.insta.get_data(links), 1),
             desc="Getting data", total=len(links))
 
@@ -49,12 +79,12 @@ class Spider:
         if isinstance(tags, list):
             for tag in tags:
                 print(f"[INFO] Search tag: {tag}")
-                self.run(tag)
+                self.run(tag, self.stage)
         elif isinstance(tags, str):
             print(f"[INFO] Search tag: {tags}")
-            self.run(tags)
+            self.run(tags, self.stage)
         else:
-            raise Exception("Error type of tags, should be `list`(list of tags) or `str`(single tag)")
+            raise Exception("[Error] Error type of tags, should be `list`(list of tags) or `str`(single tag)")
 
         self.db.close()
         self.insta.close()
