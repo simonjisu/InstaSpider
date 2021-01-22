@@ -16,11 +16,17 @@ class Spider:
         self.conf_spider = conf["spider_settings"]
 
         self.db = Database(**self.conf_db)
-        self.insta = Instagram(**self.conf_insta)
-        self.stage = self.conf_spider["stage"]
         if self.conf_spider["recreate"]:
             self.db.recreate()
-    
+
+        if not self.conf_spider["only_extract"]:
+            self.insta = Instagram(**self.conf_insta)
+        self.stage = self.conf_spider["stage"]
+        self.img_fmt = self.conf_spider["img_fmt"]
+
+        self.output_path = Path(self.conf_spider["output_path"])
+        self.check_path(self.output_path, "dir")
+
     def run(self, tag: str, stage=0):
         """Run the scripts for single tag.
 
@@ -30,27 +36,28 @@ class Spider:
                 0: run all 
                 1: run only `get_links` 
                 2: run only `get_data`, from exists links file 
-        """        
-        output_path = Path(self.conf_spider["output_path"])
+        """
+        tag_path = self.output_path / tag
+        self.check_path(tag_path, "dir")
         if stage == 0:
-            self._run_get_links(tag, output_path)
-            self._run_get_data(output_path)
+            self._run_get_links(tag, tag_path)
+            self._run_get_data(tag_path)
         elif stage == 1:
-            self._run_get_links(tag, output_path)
+            self._run_get_links(tag, tag_path)
         elif stage == 2:
-            self._run_get_links(output_path)
+            self._run_get_data(tag, tag_path)
         else:
             raise Exception("[Error] Should insert `stage`")
 
-    def _run_get_links(self, tag: str, output_path: Path):
+    def _run_get_links(self, tag: str, tag_path: Path):
         links = self.insta.collect_links(tag)
-        with (output_path / "links.txt").open("w", encoding="utf-8") as file:
+        with (tag_path / "links.txt").open("w", encoding="utf-8") as file:
             for l in links:
                 print(l, file=file)
 
-    def _run_get_data(self, output_path: Path):
-        with output_path.open("r", encoding="utf-8") as file:
-            links = [x.strip() for x in output_path.readlines()]
+    def _run_get_data(self, tag: str, tag_path: Path):
+        with (tag_path / "links.txt").open("r", encoding="utf-8") as file:
+            links = [x.strip() for x in file.readlines()]
         
         table_idx = self.db.get_last_id()
         table_idx = table_idx[0][0] if table_idx else 0
@@ -93,15 +100,11 @@ class Spider:
         if not isinstance(path, Path):
             path = Path(path)
         if typ == "dir" and not path.exists():
-            path.mkdir()
+            path.mkdir(755, parents=True)
         if typ == "file" and not path.exists():
             raise Exception(f"file {path} not exists.")
 
     def extract(self):
-        output_path = Path(self.conf_spider["output_path"])
-        self.check_path(output_path, "dir")
-        img_fmt = self.conf_spider["img_fmt"]
-        
         self.db = Database(**self.conf_db)
         c = self.db.get_cursor()
         # get all tags
@@ -113,24 +116,26 @@ class Spider:
         for tag in tags:
             pbar.set_description(f"[INFO] Extracting: {tag}")
             
-            tag_path = output_path / tag
+            tag_path = self.output_path / tag
             self.check_path(tag_path, "dir")
-            sql = f"""SELECT id, imgs, post, othertags, date, likes 
+
+            sql = f"""SELECT id, postlink, uid, imgs, post, othertags, date, likes 
                 FROM {self.db.table_name} 
                 WHERE tag = '{tag}';"""
             res = c.execute(sql).fetchall()
 
             pbar.reset(total=len(res))
-            for idx, imgs, post, hashtags, date, likes in res:
-                id_path = tag_path / f"{idx}_{date}_{likes}"
+            for idx, postlink, uid, imgs, post, hashtags, date, likes in res:
+                id_path = tag_path / f"{idx}"
                 self.check_path(id_path, "dir")
                 # info.txt: be aware of having no hashtags
                 with (id_path / "info.txt").open("w", encoding="utf-8") as file:
-                    print("\t".join([hashtags, post]), file=file)
+                    print("\t".join([str(uid), date, str(likes), postlink, post, hashtags]), 
+                        file=file)
                 # images
                 for i, img_url in enumerate(imgs.split("\t"), 1):
                     with urlopen(img_url) as img_reader:
-                        with (id_path / f"{i}{img_fmt}").open("wb") as img_writer:
+                        with (id_path / f"{i}{self.img_fmt}").open("wb") as img_writer:
                             img = img_reader.read()
                             img_writer.write(img)
                 pbar.update(1)
