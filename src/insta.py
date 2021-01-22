@@ -20,13 +20,12 @@ class Instagram:
     ATTRS_DATE = "c-Yi7"
     ATTRS_POST_TEXT = "C4VMK"
     ATTRS_LIKES = "Nm9Fw"
-    ATTRS_IMG = "FFVAD"
+    ATTRS_IMG = "KL4Bh" # "FFVAD"
     ATTRS_TAGS = "xil3i"
     ATTRS_ARIA_LABEL = "u7YqG"
     INSTA_POSTS_LEN = 3
     INSTA_FIRST_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button'
     INSTA_NEXT_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button[2]'
-    INSTA_POST_IMG_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div/div[1]/div[1]'
     ATTRS_SAVE_INFO = "cmbtv"
     ATTRS_ALRAM_OFF = "mt3GC"
     INSTA_SAVE_INFO_LATER_XPATH = '//*[@id="react-root"]/section/main/div/div/div/div/button'
@@ -96,14 +95,15 @@ class Instagram:
             self.click_button(self.INSTA_ALRAM_OFF_XPATH)
         
     def parse_tag(self, tag: str) -> str:     
-        """parse the hashtag to ascii encoded string 
+        r"""parse the hashtag to ascii encoded string
 
         Args:
             tag (str): the hashtag that you want to search
 
         Returns:
             str: ascii encoded string
-        """         
+        """
+                
         return parse.quote(tag)
 
     def get_soup(self) -> BeautifulSoup:
@@ -167,6 +167,8 @@ class Instagram:
                 previous_max_row = len(posts)
                 if new_height == last_height:
                     # if cannot scroll, stop crawling
+                    pbar.total = len(links)
+                    pbar.refresh()
                     break
                     
                 else:
@@ -196,6 +198,7 @@ class Instagram:
             date = soup.find_all(attrs={"class": self.ATTRS_DATE})[0].find("time").get("datetime")[:10]
             
             # post_text
+            # TODO: hash the @mention name in the post text
             x = soup.find_all(attrs={"class": self.ATTRS_POST_TEXT})[0]
             post_text = " ".join(html.get_text(separator=" ").strip() for html in list(x)[1:-1])
 
@@ -208,19 +211,22 @@ class Instagram:
                 likes = -1
             
             # imgs
-            img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
+            # img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
+            img_link = soup.find_all(attrs={"class": "KL4Bh"})[0].img["src"]
             imgs = [img_link]
             try:
                 self.click_button(self.INSTA_FIRST_BTN_XPATH)
                 soup = self.get_soup()
-                img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
+                # img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
+                img_link = soup.find_all(attrs={"class": "KL4Bh"})[0].img["src"]
                 imgs.append(img_link)
                 keep_click = True
                 while keep_click:
                     try: 
                         self.click_button(self.INSTA_NEXT_BTN_XPATH)
                         soup = self.get_soup()
-                        img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
+                        # img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
+                        img_link = soup.find_all(attrs={"class": "KL4Bh"})[0].img["src"]
                         imgs.append(img_link)
                     except NoSuchElementException:
                         keep_click = False
