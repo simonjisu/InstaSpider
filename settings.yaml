@@ -21,3 +21,4 @@ spider_settings:
     img_fmt: ".jpg"  # output image format
 
     recreate: False  # whether to force recreate database table at the first time
+    stage: 0  # 0: run all / 1: run only `get_links` / 2: run only `get_data`, from exists links file 
