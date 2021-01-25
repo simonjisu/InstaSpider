@@ -193,7 +193,7 @@ class Instagram:
                             ))
                     )
                 except:
-                    print(["[WARNING] The page not fully loaded!!!"])
+                    print("[WARNING] The page not fully loaded!!!")
                     pass
 
                 if new_height == last_height:
@@ -217,7 +217,7 @@ class Instagram:
                     EC.presence_of_element_located((By.CLASS_NAME, self.ATTRS_IMG))
                 )
             except:
-                print("[WARNING] Not exists: \n {post_link}")
+                print(f"[WARNING] Not exists: {post_link}")
                 continue
                 # raise Exception("Cannot find XPATH, set `DRIVER_WAIT_TIME` longer")
 
