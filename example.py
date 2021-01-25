@@ -5,13 +5,13 @@ def get_data(settings_path, tags):
 
     sp = Spider(settings_path)
     sp.main(tags)
-    sp.extract()
+    sp.extract(tags=tags)  # if set it None, will extract all
 
 # Query
 def query(settings_path):
-    from src import Database, load_settings
+    from src import Database, loadSettings
 
-    conf = load_settings(settings_path)
+    conf = loadSettings(settings_path)
     db = Database(**conf["db_settings"])
     sql = f"""SELECT * FROM {db.table_name} LIMIT 1"""
     c = db.get_cursor()

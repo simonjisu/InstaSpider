@@ -34,7 +34,8 @@ $ pip install -r requirements.txt
     # Get datas from Web -> database
     sp.main(tag)
     # Extract datas from database -> output
-    sp.extract()
+    # if set it None, will extract all distinct tags
+    sp.extract(tags=tags)  
     ```
 4. Check you sqlite db
     ```python
