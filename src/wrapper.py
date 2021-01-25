@@ -7,9 +7,9 @@ from .insta import Instagram
 from .utils import load_settings
 
 class Spider:
-    def __init__(self, setting_path: str):
-        self.check_path(setting_path, "file")
-        conf = load_settings(setting_path)
+    def __init__(self, settings_path: str):
+        self.check_path(settings_path, "file")
+        conf = load_settings(settings_path)
         
         self.conf_insta = conf["insta_settings"]
         self.conf_db = conf["db_settings"]
@@ -41,7 +41,7 @@ class Spider:
         self.check_path(tag_path, "dir")
         if stage == 0:
             self._run_get_links(tag, tag_path)
-            self._run_get_data(tag_path)
+            self._run_get_data(tag, tag_path)
         elif stage == 1:
             self._run_get_links(tag, tag_path)
         elif stage == 2:
@@ -61,7 +61,6 @@ class Spider:
         
         table_idx = self.db.get_last_id()
         table_idx = table_idx[0][0] if table_idx else 0
-        links = links[table_idx:]
 
         pbar = tqdm(enumerate(self.insta.get_data(links), 1),
             desc="Getting data", total=len(links))
@@ -104,13 +103,16 @@ class Spider:
         if typ == "file" and not path.exists():
             raise Exception(f"file {path} not exists.")
 
-    def extract(self):
+    def extract(self, tags=None):
         self.db = Database(**self.conf_db)
         c = self.db.get_cursor()
         # get all tags
-        sql = f"""SELECT DISTINCT tag FROM {self.db.table_name}"""
-        res = c.execute(sql).fetchall()
-        tags = list(map(lambda x: x[0], res))
+        if tags is None:
+            sql = f"""SELECT DISTINCT tag FROM {self.db.table_name}"""
+            res = c.execute(sql).fetchall()
+            tags = list(map(lambda x: x[0], res))
+        elif isinstance(tags, str):
+            tags = [tags]
         pbar = tqdm()
 
         for tag in tags:
@@ -133,11 +135,14 @@ class Spider:
                     print("\t".join([str(uid), date, str(likes), postlink, post, hashtags]), 
                         file=file)
                 # images
-                for i, img_url in enumerate(imgs.split("\t"), 1):
-                    with urlopen(img_url) as img_reader:
-                        with (id_path / f"{i}{self.img_fmt}").open("wb") as img_writer:
-                            img = img_reader.read()
-                            img_writer.write(img)
+                # for i, img_url in enumerate(imgs.split("\t"), 1):
+                #     with urlopen(img_url) as img_reader:
+                #         with (id_path / f"{i}{self.img_fmt}").open("wb") as img_writer:
+                #             img = img_reader.read()
+                #             img_writer.write(img)
+                for i, img in enumerate(imgs.split(self.insta.IMG_SPLIT_TAG), 1):
+                    with (id_path / f"{i}{self.img_fmt}").open("wb") as img_writer:
+                        img_writer.write(img)
                 pbar.update(1)
         c.close()
         self.db.close()

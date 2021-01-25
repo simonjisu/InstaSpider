@@ -5,22 +5,24 @@ from time import sleep
 from urllib import parse
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from urllib.request import urlopen
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from typing import Generator
 
 class Instagram:
     DRIVER_WAIT_TIME = 10
-    SLEEP_TIME = 1.5
+    SLEEP_TIME = 2
     PARSER = "html.parser"
     ATTRS_POSTS = "Nnq7C weEfm"
     ATTRS_USER_ID = "e1e1d"
     ATTRS_DATE = "c-Yi7"
     ATTRS_POST_TEXT = "C4VMK"
     ATTRS_LIKES = "Nm9Fw"
-    ATTRS_IMG = "KL4Bh" # "FFVAD"
+    ATTRS_IMG = "KL4Bh" 
+    ATTRS_IMG2 = "FFVAD"
     ATTRS_TAGS = "xil3i"
     ATTRS_ARIA_LABEL = "u7YqG"
     INSTA_POSTS_LEN = 3
@@ -30,8 +32,11 @@ class Instagram:
     ATTRS_ALRAM_OFF = "mt3GC"
     INSTA_SAVE_INFO_LATER_XPATH = '//*[@id="react-root"]/section/main/div/div/div/div/button'
     INSTA_ALRAM_OFF_XPATH = '/html/body/div[4]/div/div/div/div[3]/button[2]'
+    INSTA_SCROLL_POST_CSS = '#react-root > section > main > article > div:nth-child(3) > div'
+    INSTA_SCROLL_POST_XPATH = '//*[@id="react-root"]/section/main/article/div[2]/div/div[{}]'
     LOGIN_ID_XPATH = '//*[@id="loginForm"]/div/div[1]/div/label/input'
     LOGIN_PW_XPATH = '//*[@id="loginForm"]/div/div[2]/div/label/input'
+    IMG_SPLIT_TAG = b"<IMG>"
 
     def __init__(self, **kwargs):
         if os.name == "nt":
@@ -74,6 +79,7 @@ class Instagram:
         self.driver.get(login_url)
         sleep(self.SLEEP_TIME)
         try:
+            self.INSTA_SCROLL_POST_XPATH
             username_box_check = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
                 EC.presence_of_element_located((By.XPATH, self.LOGIN_ID_XPATH))
             )
@@ -123,6 +129,11 @@ class Instagram:
         self.driver.close()
         print("[INFO] driver closed")
 
+    def get_byte_img(self, img_link):
+        with urlopen(img_link) as img_reader:
+            img_byte = img_reader.read()
+        return img_byte
+
     def collect_links(self, tag: str) -> list:
         """collect links of posts
 
@@ -135,14 +146,15 @@ class Instagram:
         links = []
         url = f"https://www.instagram.com/explore/tags/{self.parse_tag(tag)}/"
         self.get_link(url)
-        previous_max_row = 0
         pbar = tqdm(total=self.thres_links)
 
         while len(links) < self.thres_links:
             soup = self.get_soup()
             posts = list(soup.find_all(name="div", attrs={"class": self.ATTRS_POSTS}))
-            for link in posts[previous_max_row:]:
+            for link in posts:
                 for post in link.select("a"):
+                    if post.attrs["href"] in links:
+                        continue
                     if len(links) >= self.thres_links:
                         break
                     # skip all videos
@@ -152,19 +164,38 @@ class Instagram:
                         l = post.attrs["href"]
                         links.append(l)
                         pbar.update(1)
-            
+
+            scroll_contin = soup.select(self.INSTA_SCROLL_POST_CSS)
+            if scroll_contin:
+                recent_row_length = len(scroll_contin[0].find_all(
+                    attrs={"class": self.ATTRS_POSTS}))
+                pbar.set_description(f"Recent Posts Length: {recent_row_length}")
+            else:
+                # if no recent post. break 
+                break
 
             last_height = self.driver.execute_script("return document.body.scrollHeight")
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            new_height = self.driver.execute_script("return document.body.scrollHeight")
-            previous_max_row = len(posts)
-            pbar.set_description(f"previous max_row: {previous_max_row}")
             sleep(self.SLEEP_TIME)
+            new_height = self.driver.execute_script("return document.body.scrollHeight")
+
             if new_height == last_height:
                 self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 sleep(self.SLEEP_TIME)
                 new_height = self.driver.execute_script("return document.body.scrollHeight")
-                previous_max_row = len(posts)
+                
+                # To check the scrolled page is fully loaded
+                try:
+                    new_row = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
+                        EC.presence_of_element_located((
+                            By.XPATH, 
+                            self.INSTA_SCROLL_POST_XPATH.format(recent_row_length+1)
+                            ))
+                    )
+                except:
+                    print(["[WARNING] The page not fully loaded!!!"])
+                    pass
+
                 if new_height == last_height:
                     # if cannot scroll, stop crawling
                     pbar.total = len(links)
@@ -173,22 +204,22 @@ class Instagram:
                     
                 else:
                     last_height = new_height
-                    sleep(self.SLEEP_TIME)
                     continue
         pbar.close()
         return links
-
 
     def get_data(self, links: list) -> Generator:
         for i in range(len(links)):
             post_link = f"https://www.instagram.com/{links[i]}"
             self.get_link(post_link)
             try:
-                username_box_check = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
+                img_loaded_check = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
                     EC.presence_of_element_located((By.CLASS_NAME, self.ATTRS_IMG))
                 )
             except:
-                raise Exception("Cannot find XPATH, set `DRIVER_WAIT_TIME` longer")
+                print("[WARNING] Not exists: \n {post_link}")
+                continue
+                # raise Exception("Cannot find XPATH, set `DRIVER_WAIT_TIME` longer")
 
             soup = self.get_soup()
 
@@ -212,28 +243,30 @@ class Instagram:
                 likes = -1
             
             # imgs
-            # img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
-            img_link = soup.find_all(attrs={"class": "KL4Bh"})[0].img["src"]
-            imgs = [img_link]
+            # TODO: bug, cannot find the class element when we make the window smallest 
+            img_link = soup.find_all(attrs={"class": self.ATTRS_IMG})[0].img["src"]
+            # imgs = [img_link]
+            imgs = [self.get_byte_img(img_link)]
             try:
                 self.click_button(self.INSTA_FIRST_BTN_XPATH)
                 soup = self.get_soup()
-                # img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
-                img_link = soup.find_all(attrs={"class": "KL4Bh"})[0].img["src"]
-                imgs.append(img_link)
+                img_link = soup.find_all(attrs={"class": self.ATTRS_IMG})[0].img["src"]
+                imgs.append(self.get_byte_img(img_link))
+                # imgs.append(img_link)
                 keep_click = True
                 while keep_click:
                     try: 
                         self.click_button(self.INSTA_NEXT_BTN_XPATH)
                         soup = self.get_soup()
-                        # img_link = soup.find_all("img", attrs={"class": self.ATTRS_IMG})[0]["src"]
-                        img_link = soup.find_all(attrs={"class": "KL4Bh"})[0].img["src"]
-                        imgs.append(img_link)
+                        img_link = soup.find_all(attrs={"class": self.ATTRS_IMG})[0].img["src"]
+                        imgs.append(self.get_byte_img(img_link))
+                        # imgs.append(img_link)
                     except NoSuchElementException:
                         keep_click = False
             except NoSuchElementException:
                 pass
-            imgs = "\t".join(imgs)
+            # imgs = "\t".join(imgs)
+            imgs = self.IMG_SPLIT_TAG.join(imgs)
 
             # othertags
             x = soup.find_all(attrs={"class": self.ATTRS_TAGS})

@@ -2,6 +2,8 @@ import sqlite3
 from typing import List, Tuple
 
 class Database:
+    IMG_SPLIT_TAG = b"<IMG>"
+
     def __init__(self, **kwargs):
         self.db_name = "./database/" + kwargs["db_name"]
         self.table_name = kwargs["table_name"]
@@ -14,7 +16,7 @@ class Database:
         tag TEXT: searched tag
         postlink TEXT: post link 
         post TEXT: post
-        imgs TEXT: image links of the post
+        imgs BLOB: byte object of the post
         othertags TEXT: other tags that linked
         uid INTEGER: hashed userid
         date TEXT: time of the post (%Y-%m-%d)
@@ -23,7 +25,7 @@ class Database:
         sql = f"""CREATE TABLE {self.table_name} (
             id INTEGER PRIMARY KEY, 
             tag TEXT, postlink TEXT, post TEXT, 
-            imgs TEXT, othertags TEXT, uid INTEGER, 
+            imgs BLOB, othertags TEXT, uid INTEGER, 
             date TEXT, likes INTEGER)"""
         c = self.get_cursor()
         res = c.execute(f"SELECT COUNT(*) FROM sqlite_master WHERE name='{self.table_name}'")
@@ -55,7 +57,7 @@ class Database:
                 tag: str
                 postlink: str
                 post: str
-                imgs: str
+                imgs: byte-str
                 othertags: str
                 uid: int
                 date: str
