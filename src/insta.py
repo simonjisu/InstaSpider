@@ -53,7 +53,7 @@ class Instagram:
         if kwargs["driver_headless"]:
             options.add_argument("--headless")
         # options.add_argument('--disable-dev-shm-usage')
-        # options.add_argument("user-agent=Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko")
 
         self.driver = webdriver.Chrome(chrome_p, options=options)
         self.thres_links = kwargs["thres_links"]
@@ -185,16 +185,19 @@ class Instagram:
                 new_height = self.driver.execute_script("return document.body.scrollHeight")
                 
                 # To check the scrolled page is fully loaded
-                try:
-                    new_row = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
-                        EC.presence_of_element_located((
-                            By.XPATH, 
-                            self.INSTA_SCROLL_POST_XPATH.format(recent_row_length+1)
-                            ))
-                    )
-                except:
-                    print("[WARNING] The page not fully loaded!!!")
-                    pass
+                # try:
+                #     new_row = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
+                #         EC.presence_of_element_located((
+                #             By.XPATH, 
+                #             self.INSTA_SCROLL_POST_XPATH.format(recent_row_length+1)
+                #             ))
+                #     )
+                # except:
+                #     self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                #     sleep(self.SLEEP_TIME)
+                #     new_height = self.driver.execute_script("return document.body.scrollHeight")
+                #     print("[WARNING] The page not fully loaded!!!")
+                #     pass
 
                 if new_height == last_height:
                     # if cannot scroll, stop crawling
@@ -231,8 +234,12 @@ class Instagram:
             
             # post_text
             # TODO: hash the @mention name in the post text
-            x = soup.find_all(attrs={"class": self.ATTRS_POST_TEXT})[0]
-            post_text = " ".join(html.get_text(separator=" ").strip() for html in list(x)[1:-1])
+            x = soup.find_all(attrs={"class": self.ATTRS_POST_TEXT})
+            if x:
+                x = x[0]
+                post_text = " ".join(html.get_text(separator=" ").strip() for html in list(x)[1:-1])
+            else:
+                post_text = " "
 
             # likes
             x = soup.find_all(attrs={"class": self.ATTRS_LIKES})

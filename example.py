@@ -9,9 +9,9 @@ def get_data(settings_path, tags):
 
 # Query
 def query(settings_path):
-    from src import Database, loadSettings
+    from src import Database, load_settings
 
-    conf = loadSettings(settings_path)
+    conf = load_settings(settings_path)
     db = Database(**conf["db_settings"])
     sql = f"""SELECT * FROM {db.table_name} LIMIT 1"""
     c = db.get_cursor()

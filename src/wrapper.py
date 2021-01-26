@@ -99,7 +99,8 @@ class Spider:
         if not isinstance(path, Path):
             path = Path(path)
         if typ == "dir" and not path.exists():
-            path.mkdir(755, parents=True)
+            path.mkdir(parents=True)
+            print(f"[INFO] Path: {path} Created!")
         if typ == "file" and not path.exists():
             raise Exception(f"file {path} not exists.")
 
