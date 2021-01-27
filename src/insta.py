@@ -1,5 +1,7 @@
 import os
 import re
+import bs4
+from typing import Union
 from tqdm import tqdm
 from time import sleep
 from urllib import parse
@@ -21,12 +23,13 @@ class Instagram:
     ATTRS_DATE = "c-Yi7"
     ATTRS_POST_TEXT = "C4VMK"
     ATTRS_LIKES = "Nm9Fw"
-    ATTRS_IMG = "KL4Bh" 
-    ATTRS_IMG2 = "FFVAD"
+    # ATTRS_IMG = "KL4Bh" 
+    ATTRS_IMG = "FFVAD"
     ATTRS_TAGS = "xil3i"
     ATTRS_ARIA_LABEL = "u7YqG"
-    INSTA_POSTS_LEN = 3
+    ATTRS_POST_LIST = "Ckrof"
     INSTA_FIRST_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button'
+    INSTA_PREV_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button[1]'
     INSTA_NEXT_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button[2]'
     ATTRS_SAVE_INFO = "cmbtv"
     ATTRS_ALRAM_OFF = "mt3GC"
@@ -53,7 +56,7 @@ class Instagram:
         if kwargs["driver_headless"]:
             options.add_argument("--headless")
         # options.add_argument('--disable-dev-shm-usage')
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko")
+        # options.add_argument("user-agent=Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko")
 
         self.driver = webdriver.Chrome(chrome_p, options=options)
         self.thres_links = kwargs["thres_links"]
@@ -66,7 +69,7 @@ class Instagram:
         insta_pw = kwargs["insta_pw"]
         self.login(insta_id, insta_pw)
             
-        print("[INFO] Done!")
+        print("[INFO] Login Done!")
 
     def login(self, insta_id: str, insta_pw: str):
         r"""login to instagram
@@ -112,7 +115,7 @@ class Instagram:
                 
         return parse.quote(tag)
 
-    def get_soup(self) -> BeautifulSoup:
+    def get_soup(self) -> bs4.BeautifulSoup:
         webpage = self.driver.page_source
         soup = BeautifulSoup(webpage, self.PARSER)
         return soup
@@ -121,6 +124,13 @@ class Instagram:
         self.driver.get(url)
         sleep(self.SLEEP_TIME)
 
+    def exists_xpath(self, xpath: str):
+        try:
+            self.driver.find_element(By.XPATH, xpath)
+            return True
+        except NoSuchElementException:
+            return False
+
     def click_button(self, xpath: str):    
         self.driver.find_element(By.XPATH, xpath).click()
         sleep(self.SLEEP_TIME)
@@ -128,11 +138,6 @@ class Instagram:
     def close(self):
         self.driver.close()
         print("[INFO] driver closed")
-
-    def get_byte_img(self, img_link):
-        with urlopen(img_link) as img_reader:
-            img_byte = img_reader.read()
-        return img_byte
 
     def collect_links(self, tag: str) -> list:
         """collect links of posts
@@ -183,21 +188,6 @@ class Instagram:
                 self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 sleep(self.SLEEP_TIME)
                 new_height = self.driver.execute_script("return document.body.scrollHeight")
-                
-                # To check the scrolled page is fully loaded
-                # try:
-                #     new_row = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
-                #         EC.presence_of_element_located((
-                #             By.XPATH, 
-                #             self.INSTA_SCROLL_POST_XPATH.format(recent_row_length+1)
-                #             ))
-                #     )
-                # except:
-                #     self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                #     sleep(self.SLEEP_TIME)
-                #     new_height = self.driver.execute_script("return document.body.scrollHeight")
-                #     print("[WARNING] The page not fully loaded!!!")
-                #     pass
 
                 if new_height == last_height:
                     # if cannot scroll, stop crawling
@@ -210,6 +200,45 @@ class Instagram:
                     continue
         pbar.close()
         return links
+
+    def get_byte_img(self, img_link):
+        with urlopen(img_link) as img_reader:
+            img_byte = img_reader.read()
+        return img_byte
+
+    def get_img(self, soup: bs4.BeautifulSoup, idx: int) -> Union[str, list]:
+        """return img source, if no <img> tag will return empty list
+        if the post_list is empty, means only have single image
+        else means having multiple images
+
+        Args:
+            soup (bs4.BeautifulSoup): soup object 
+            idx (int): post list index
+
+        Returns:
+            Union[str, list]: img source link or empty list 
+        """        
+        post_list = soup.find_all(attrs={"class": self.ATTRS_POST_LIST})
+        if post_list:
+            img_link = self.get_img_from_post_div(post_list[idx])
+        else:
+            img_link = soup.find_all(attrs={"class": self.ATTRS_IMG})[0]["src"]
+        return img_link
+
+    def get_img_from_post_div(self, post_div: bs4.element.Tag) -> Union[str, list]:
+        """return img source, if no <img> tag will return empty list
+
+        Args:
+            post_div (bs4.element.Tag): `bs4.element.Tag` object that can find tags by attributes
+
+        Returns:
+            Union[str, list]: img source link or empty list 
+        """        
+        x = post_div.find_all(attrs={"class": self.ATTRS_IMG})
+        if x:
+            return x[0]["src"]
+        else:
+            return x
 
     def get_data(self, links: list) -> Generator:
         for i in range(len(links)):
@@ -250,29 +279,23 @@ class Instagram:
                 likes = -1
             
             # imgs
-            # TODO: bug, cannot find the class element when we make the window smallest 
-            img_link = soup.find_all(attrs={"class": self.ATTRS_IMG})[0].img["src"]
-            # imgs = [img_link]
-            imgs = [self.get_byte_img(img_link)]
-            try:
+            # TODO: bug, cannot find the class element when we make the window smallest
+            img_link = self.get_img(soup=soup, idx=0)
+            # create image container, if first image is video, will create empty list
+            imgs = [self.get_byte_img(img_link)] if img_link else img_link
+            if self.exists_xpath(self.INSTA_FIRST_BTN_XPATH):
                 self.click_button(self.INSTA_FIRST_BTN_XPATH)
                 soup = self.get_soup()
-                img_link = soup.find_all(attrs={"class": self.ATTRS_IMG})[0].img["src"]
-                imgs.append(self.get_byte_img(img_link))
-                # imgs.append(img_link)
-                keep_click = True
-                while keep_click:
-                    try: 
-                        self.click_button(self.INSTA_NEXT_BTN_XPATH)
-                        soup = self.get_soup()
-                        img_link = soup.find_all(attrs={"class": self.ATTRS_IMG})[0].img["src"]
+                img_link = self.get_img(soup=soup, idx=1)
+                if img_link:
+                    imgs.append(self.get_byte_img(img_link))
+                while self.exists_xpath(self.INSTA_NEXT_BTN_XPATH):
+                    self.click_button(self.INSTA_NEXT_BTN_XPATH)
+                    soup = self.get_soup()
+                    img_link = self.get_img(soup=soup, idx=1)
+                    if img_link:
                         imgs.append(self.get_byte_img(img_link))
-                        # imgs.append(img_link)
-                    except NoSuchElementException:
-                        keep_click = False
-            except NoSuchElementException:
-                pass
-            # imgs = "\t".join(imgs)
+
             imgs = self.IMG_SPLIT_TAG.join(imgs)
 
             # othertags
