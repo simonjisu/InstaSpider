@@ -60,7 +60,7 @@ $ pip install -r requirements.txt
 You can extract data from your database, the folder structure of `output` is like following:
 
 * `tag{x}`: searched tags
-* `id{x}_date_likes`: unique database id + date + likes
+* `id{x}`: unique database id + date + likes
 * `info.txt`: contains the post text and hashtags, it can be possible that there is no hashtags or post
 * `{x}.jpg`: images of the post (can be multiple)
 
@@ -75,11 +75,27 @@ InstaSpider
      │    │     ├── info.txt (uid, date, likes, postlink, post, hashtags)
      │    │     ├── 1.jpg
      │    │     └── 2.jpg
-     │    └── id2_date_likes
+     │    └── id2
      └── tag2  # searched tag 2
 ```
 
-<!-- WC TEST -->
+## Labeler
+
+We build a labeler program for our research.
+
+```bash
+$ python ./labelApp.py --settings_path ./settings.yaml
+```
+
+<img src="icons/labeler.png" width=640 height=320>
+
+# TODO
+
+- [x] ~~**TO BE FIXED** The first image always inserted twice~~
+- [x] ~~**NEW** Finish Labeler~~
+- [ ] **NEW** Split the extract process into different file
+- [ ] **NEW** Hash the username in the post text(INTO a special token).
+- [ ] **NEW** Check the right form of email to login
 
 # License
 
