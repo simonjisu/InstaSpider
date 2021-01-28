@@ -14,12 +14,6 @@ from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QWidget, QAction, \
     QLabel, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTextBrowser, \
     QSlider, QComboBox, QMessageBox, QTextEdit, QShortcut, QProgressBar, QFrame, qApp
 
-class VLine(QFrame):
-    # a simple VLine, like the one you get from designer
-    def __init__(self):
-        super(VLine, self).__init__()
-        self.setFrameShape(self.VLine|self.Sunken)
-
 class Labeler(QMainWindow):
     TAG_CONTAINER_NAME = "{}_tag_container.pickle"
     TAG_BASE = "<SELECT>"
