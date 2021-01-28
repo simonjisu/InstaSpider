@@ -141,7 +141,7 @@ class Labeler(QMainWindow):
         # Label
         btn_labels = ["AA", "AR", "RA", "RR"]
         btn_locations = [(0, 0), (0, 1), (1, 0), (1, 1)]
-        btn_shortcut_key = [("T", Qt.Key_T), ("G", Qt.Key_G), ("Y", Qt.Key_Y), ("H", Qt.Key_H)]
+        btn_shortcut_key = [("T", Qt.Key_T), ("Y", Qt.Key_Y), ("G", Qt.Key_G), ("H", Qt.Key_H)]
         btn_links = [
             self._btn_AA_clicked, self._btn_AR_clicked, 
             self._btn_RA_clicked, self._btn_RR_clicked
