@@ -12,7 +12,8 @@ from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QWidget, QAction, \
     QLabel, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTextBrowser, \
-    QSlider, QComboBox, QMessageBox, QTextEdit, QShortcut, QProgressBar, QFrame, qApp
+    QSlider, QComboBox, QMessageBox, QTextEdit, QShortcut, QProgressBar, QFrame, \
+    QFileDialog, qApp
 
 class Labeler(QMainWindow):
     TAG_CONTAINER_NAME = "{}_tag_container.pickle"
@@ -63,11 +64,12 @@ class Labeler(QMainWindow):
         self.status_bar.showMessage("Ready")
 
         # toolbars
-        exit_action, save_action, ex_action = self.create_toolbars()
+        exit_action, save_action, ex_action, load_action = self.create_toolbars()
         self.toolbar = self.addToolBar("Toolbar")
         self.toolbar.addAction(exit_action)
         self.toolbar.addAction(save_action)
         self.toolbar.addAction(ex_action)
+        self.toolbar.addAction(load_action)
 
         # widgets
         hbox_top_widgets = self.create_top_widgets()
@@ -112,7 +114,14 @@ class Labeler(QMainWindow):
         ex_action.setShortcut("Ctrl+E")
         ex_action.setStatusTip("Extract Current Label Container(Ctrl + E)")
         ex_action.triggered.connect(self.extract)
-        return exit_action, save_action, ex_action
+        # load
+        load_action = QAction(
+            QIcon(str(self.icon_path / "open.png")), "Load", self)
+        load_action.setShortcut("Ctrl+O")
+        load_action.setStatusTip("Overwrite data to Current Label Container(Ctrl + O)")
+        load_action.triggered.connect(self.load)
+
+        return exit_action, save_action, ex_action, load_action
 
     def create_top_widgets(self):
         label_str = "1. Select Tag 2. Select one of Label(A: Advertisement / R: Real Life)"
@@ -286,7 +295,7 @@ class Labeler(QMainWindow):
                 if reply == QMessageBox.Yes:
                     self._extract(path=extract_path)
                 else:
-                    pass
+                    self.status_bar.showMessage(f"Not Overwrite to {extract_path}")
             else:
                 self._extract(path=extract_path)
 
@@ -307,6 +316,30 @@ class Labeler(QMainWindow):
         self.save_label_container()
         qApp.quit()
 
+    def load(self):
+        transform = lambda x: (int(x[0]), x[1])
+        current_tag = self._get_current_tag()
+        if current_tag == self.TAG_BASE:
+            self.status_bar.showMessage(f"Cannot load files at <SELECT> tag")
+        else:
+            file_dialog = QFileDialog(self)
+            f_path, _ = QFileDialog.getOpenFileName(file_dialog, "Open File", f"{self.output_path}", "Text files (*.txt)")
+            f_path = Path(f_path)
+            if f_path.name != "":
+                with f_path.open("r", encoding="utf-8") as file:
+                    data = file.readlines()
+                data = dict([transform(line.strip().split("\t")) for line in data])
+                msg = f"All Values will be overwrite in to label container. Are you sure?"
+                reply = QMessageBox.question(self, "Message", msg,
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if reply == QMessageBox.Yes:
+                    for k, v in data.items():
+                        self.label_container[k] = v
+                    self.status_bar.showMessage(f"Loaded(Overwrited) {f_path.name}")
+                else:
+                    self.status_bar.showMessage(f"Not Loaded the file {f_path.name}")
+            self.refresh()
+
     def reset(self):
         self.widgets["post_slider"].setRange(0, 0)
         self.widgets["post_slider"].setSingleStep(1)
@@ -315,6 +348,14 @@ class Labeler(QMainWindow):
         self.widgets["post_id"].setPlainText("")
         self.widgets["label_current"].setPlainText("")
         self.widgets['label_blank'].setPlainText("")
+
+    def refresh(self):
+        current_tag = self._get_current_tag()
+        if current_tag == self.TAG_BASE:
+            pass
+        else:
+            current_id = self._get_current_post_id()
+            self.load_data(current_id)
 
     def load_data(self, db_id: int):
         self.widgets["post_id"].setText(f"{db_id}")
