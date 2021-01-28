@@ -2,3 +2,5 @@ beautifulsoup4
 PyYAML >=5.*
 selenium >=3.*
 tqdm
+PyQt5 >= 5.*
+Pillow
