@@ -13,7 +13,7 @@ from PyQt5.QtGui import QIcon, QPixmap, QFont
 from PyQt5.QtWidgets import QDesktopWidget, QMainWindow, QWidget, QAction, \
     QLabel, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTextBrowser, \
     QSlider, QComboBox, QMessageBox, QTextEdit, QShortcut, QProgressBar, QFrame, \
-    QFileDialog, qApp
+    QFileDialog, QSpinBox, QListWidget, qApp
 
 class Labeler(QMainWindow):
     TAG_CONTAINER_NAME = "{}_tag_container.pickle"
@@ -43,6 +43,7 @@ class Labeler(QMainWindow):
         self.img_width = 640
         self.w = QWidget()
         self.label_container = {}  # dictionary
+        self.label_fmt = "{:06d}: {}"
         self.setCentralWidget(self.w)
         self.c = self.db.get_cursor()
         self.initUI()
@@ -72,19 +73,25 @@ class Labeler(QMainWindow):
         self.toolbar.addAction(load_action)
 
         # widgets
+        total_hbox = QHBoxLayout()
         hbox_top_widgets = self.create_top_widgets()
         hbox_select = self.create_labeler()
         hbox_post = self.create_post_ui()
         
-        vbox = QVBoxLayout()
-        vbox.addLayout(hbox_top_widgets)
-        vbox.addLayout(hbox_select)
-        vbox.addLayout(hbox_post)
-        vbox.setAlignment(Qt.AlignTop)
-        self.w.setLayout(vbox)
+        vbox_ui = QVBoxLayout()
+        vbox_ui.addLayout(hbox_top_widgets)
+        vbox_ui.addLayout(hbox_select)
+        vbox_ui.addLayout(hbox_post)
+        vbox_ui.setAlignment(Qt.AlignTop)
+
+        vbox_progress = self.create_progress()
+        
+        total_hbox.addLayout(vbox_ui)
+        total_hbox.addLayout(vbox_progress)
+        self.w.setLayout(total_hbox)
         
         self.setWindowTitle("Labeler")
-        self.resize(1280, 720) # width hight
+        self.resize(1380, 720) # width hight
         # self.center_window()
         
         self.show()
@@ -193,7 +200,7 @@ class Labeler(QMainWindow):
         label_information = QLabel("Last blank label", self)
         label_information.setFixedSize(90, 30)
         label_information.setAlignment(Qt.AlignCenter)
-        self.widgets["label_blank"] = QTextEdit()
+        self.widgets["label_blank"] = QSpinBox()
         self.widgets["label_blank"].setFixedSize(90, 30)
         self.widgets['label_blank'].setAlignment(Qt.AlignCenter)
         vbox_jump.addWidget(label_information)
@@ -202,6 +209,7 @@ class Labeler(QMainWindow):
         self.widgets["btn_jump"] = QPushButton("Jump", self)
         self.widgets["btn_jump"].setFixedSize(80, 70)
         self.widgets["btn_jump"].clicked.connect(self._btn_jump_clicked)
+        self.widgets["btn_jump"].setShortcut(Qt.Key_J)
         hbox_jump.addLayout(vbox_jump)
         hbox_jump.addWidget(self.widgets["btn_jump"])
         hbox_jump.setAlignment(Qt.AlignCenter)
@@ -248,12 +256,17 @@ class Labeler(QMainWindow):
         post_id_label = QLabel(post_label_str, self)
         post_id_label.setFixedSize(100, 30)
         self.widgets["post_id"] = QTextBrowser()
-        self.widgets['post_id'].setFixedSize(40, 30)
-        self.widgets['post_id'].setAlignment(Qt.AlignCenter)
+        self.widgets["post_id"].setFixedSize(40, 30)
+        self.widgets["post_id"].setAlignment(Qt.AlignCenter)
 
         self.widgets["post_text"] = QTextBrowser()
         self.widgets["post_text"].setAcceptRichText(True)
         self.widgets["post_text"].setFont(QFont("arial"))
+
+        self.widgets["post_hashtag"] = QTextBrowser()
+        self.widgets["post_hashtag"].setAcceptRichText(True)
+        self.widgets["post_hashtag"].setFont(QFont("arial"))
+        self.widgets["post_hashtag"].setFixedHeight(100)
 
         hbox_slider_number.addWidget(self.widgets["post_slider"])
         hbox_slider_number.addWidget(self.widgets["post_slider_label"])
@@ -264,10 +277,19 @@ class Labeler(QMainWindow):
         vbox1.addWidget(self.widgets["post_img_label"])
         vbox2.addLayout(hbox_label_id)
         vbox2.addWidget(self.widgets["post_text"])
+        vbox2.addWidget(self.widgets["post_hashtag"])
         hbox.addLayout(vbox1)
         hbox.addLayout(vbox2)
         hbox.setAlignment(Qt.AlignCenter)
         return hbox
+
+    def create_progress(self):
+        vbox_progress = QVBoxLayout()
+        self.widgets["label_list"] = QListWidget()
+        self.widgets["label_list"].setFixedWidth(120)
+        self.widgets["label_list"].itemDoubleClicked.connect(self._progress_dclicked)
+        vbox_progress.addWidget(self.widgets["label_list"])
+        return vbox_progress
 
     def get_avaiable_tags(self):
         sql = f"""SELECT DISTINCT tag FROM {self.db.table_name}"""
@@ -313,6 +335,8 @@ class Labeler(QMainWindow):
                 pbar.setValue(step)
 
     def exit(self):
+        self.c.close()
+        self.db.close()
         self.save_label_container()
         qApp.quit()
 
@@ -342,12 +366,13 @@ class Labeler(QMainWindow):
 
     def reset(self):
         self.widgets["post_slider"].setRange(0, 0)
-        self.widgets["post_slider"].setSingleStep(1)
+        self.widgets["post_slider"].setValue(1)
         self.widgets["post_img_label"].setPixmap(QPixmap())
         self.widgets["post_text"].setPlainText("")
         self.widgets["post_id"].setPlainText("")
+        self.widgets["post_hashtag"].setPlainText("")
         self.widgets["label_current"].setPlainText("")
-        self.widgets['label_blank'].setPlainText("")
+        self.widgets["label_blank"].setValue(0)
 
     def refresh(self):
         current_tag = self._get_current_tag()
@@ -367,19 +392,23 @@ class Labeler(QMainWindow):
         else:
             self.widgets["label_current"].setText("")
 
-        sql = f"""SELECT post, imgs FROM {self.db.table_name}
+        sql = f"""SELECT post, imgs, othertags FROM {self.db.table_name}
             WHERE id={db_id}
             """
-        post, imgs = self.c.execute(sql).fetchone()
-        self.widgets["post_text"].setText(
-            self._process_post(post)
-        )
-
+        post, imgs, othertags = self.c.execute(sql).fetchone()
+        # set Image
         self.imgs = self._set_post_img_label(imgs)
         self.widgets["post_img_label"].setPixmap(
             self._open_image(self.imgs[0])
         )
-
+        self.widgets["post_slider"].setValue(0)
+        # set Post Text
+        self.widgets["post_text"].setText(
+            self._process_post(post)
+        )
+        # set Hashtag
+        self.widgets["post_hashtag"].setText(othertags)
+        
     def load_label_container(self, tag: str):
         tag_path = self.output_path / tag
         self.check_path(tag_path, "dir")
@@ -391,6 +420,7 @@ class Labeler(QMainWindow):
             self.label_container = {}
             warning_str = "New label container created. Please Save it after labeling."
             QMessageBox.warning(None, "Message", warning_str)
+        self._show_progress()
 
     def save_label_container(self):
         current_tag = self._get_current_tag()
@@ -408,13 +438,13 @@ class Labeler(QMainWindow):
     def _get_blank_id(self):
         current_tag = self._get_current_tag()
         if current_tag == self.TAG_BASE:
-            self.widgets['label_blank'].setPlainText("")
+            self.widgets['label_blank'].setValue(0)
         else:
             ids = self.get_avaiable_ids(current_tag)
             for i in sorted(ids):
                 if self.label_container.get(i) is None:
                     break
-            self.widgets['label_blank'].setPlainText(f"{i}")     
+            self.widgets['label_blank'].setValue(i)
 
     def _tags_clicked(self, value: str):
         self.status_bar.showMessage(f"tag: {value} Selected")
@@ -458,11 +488,11 @@ class Labeler(QMainWindow):
             processed_post = re.sub(tag, f"<span style='color: #000080'>{tag}</span>", processed_post)
         return processed_post
 
-    def _get_current_post_id(self):
+    def _get_current_post_id(self) -> int:
         current_id = int(self.widgets["post_id"].toPlainText())
         return current_id
 
-    def _get_current_tag(self):
+    def _get_current_tag(self) -> str:
         current_tag = self.widgets["tags"].currentText()
         return current_tag
 
@@ -482,6 +512,7 @@ class Labeler(QMainWindow):
             current_id = self._get_current_post_id()
             self.label_container[current_id] = txt
             self.status_bar.showMessage("")
+            self._update_progress()
 
     def _btn_AR_clicked(self):
         txt = "AR"
@@ -493,6 +524,7 @@ class Labeler(QMainWindow):
             current_id = self._get_current_post_id()
             self.label_container[current_id] = txt
             self.status_bar.showMessage("")
+            self._update_progress()
 
     def _btn_RA_clicked(self):
         txt = "RA"
@@ -504,6 +536,7 @@ class Labeler(QMainWindow):
             current_id = self._get_current_post_id()
             self.label_container[current_id] = txt
             self.status_bar.showMessage("")
+            self._update_progress()
 
     def _btn_RR_clicked(self):
         txt = "RR"
@@ -515,6 +548,7 @@ class Labeler(QMainWindow):
             current_id = self._get_current_post_id()
             self.label_container[current_id] = txt
             self.status_bar.showMessage("")
+            self._update_progress()
 
     def _btn_next_clicked(self):
         current_tag = self._get_current_tag()
@@ -553,18 +587,14 @@ class Labeler(QMainWindow):
     def _btn_jump_clicked(self):
         current_tag = self._get_current_tag()
         if current_tag == self.TAG_BASE:
-            pass
+            self.status_bar.showMessage("Cannot Jump as <SELECT> tag")
         else:
-            txt = self.widgets["label_blank"].toPlainText()
-            try: 
-                blank_id = int(txt)
-                ids = self.get_avaiable_ids(current_tag)
-                if blank_id in ids:
-                    self.load_data(blank_id)
-                else:
-                    self.status_bar.showMessage("Cannot Jump, number is not exists.")
-            except ValueError:
-                self.status_bar.showMessage("Cannot Jump, since there is no number inserted")
+            blank_id = self.widgets["label_blank"].value()
+            ids = self.get_avaiable_ids(current_tag)
+            if blank_id in ids:
+                self.load_data(blank_id)
+            else:
+                self.status_bar.showMessage("Cannot Jump, number is not exists.")
 
     def _btn_del_clicked(self):
         current_tag = self._get_current_tag()
@@ -575,5 +605,34 @@ class Labeler(QMainWindow):
             if self.label_container.get(current_id):
                 self.label_container.pop(current_id)
                 self.widgets["label_current"].setPlainText("")
+                self._update_progress()
             else:
                 self.status_bar.showMessage("No such id to delete in label container")
+            
+    def _progress_dclicked(self):
+        item_txt = self.widgets["label_list"].currentItem().text()
+        to_id = int(item_txt.split(":")[0])
+        self.load_data(to_id)
+
+    def _update_progress(self):
+        current_id = self._get_current_post_id()
+        current_label = self.label_container.get(current_id)
+        item = self.widgets["label_list"].item(current_id-1)
+        if current_label is None:
+            item.setText(self.label_fmt.format(current_id, ""))
+        else:
+            item.setText(self.label_fmt.format(current_id, current_label))
+
+    def _show_progress(self):
+        r"""do @ load_label_container loaded"""
+        current_tag = self._get_current_tag()
+        ids = self.get_avaiable_ids(current_tag)
+        if self.label_container:
+            ls = []
+            for i in ids:
+                label = self.label_container.get(i)
+                label_str = self.label_fmt.format(i, label) if label else self.label_fmt.format(i, "")
+                ls.append(label_str)
+        else:
+            ls = [self.label_fmt.format(i, "") for i in ids]
+        self.widgets["label_list"].addItems(ls)
