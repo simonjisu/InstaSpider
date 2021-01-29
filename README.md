@@ -93,6 +93,7 @@ $ python ./labelApp.py --settings_path ./settings.yaml
 
 - [x] ~~**TO BE FIXED** The first image always inserted twice~~
 - [x] ~~**NEW** Finish Labeler~~
+- [x] ~~**NEW** ~~Labeler: Progress Bar with jump to post immediately by double click~~
 - [ ] **NEW** Split the extract process into different file
 - [ ] **NEW** Hash the username in the post text(INTO a special token).
 - [ ] **NEW** Check the right form of email to login
