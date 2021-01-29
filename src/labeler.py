@@ -635,4 +635,5 @@ class Labeler(QMainWindow):
                 ls.append(label_str)
         else:
             ls = [self.label_fmt.format(i, "") for i in ids]
+        self.widgets["label_list"].clear()
         self.widgets["label_list"].addItems(ls)
