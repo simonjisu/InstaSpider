@@ -217,8 +217,9 @@ class Labeler(QMainWindow):
         # Delete
         self.widgets["btn_del"] = QPushButton("Delete", self)
         self.widgets["btn_del"].setFixedSize(80, 70)
+        self.widgets["btn_del"].setShortcut(Qt.Key_Delete)
         self.widgets["btn_del"].clicked.connect(self._btn_del_clicked)
-
+        
         # Total boxes
         hbox = QHBoxLayout()
         hbox.addLayout(layout_grid)
@@ -372,7 +373,7 @@ class Labeler(QMainWindow):
         self.widgets["post_id"].setPlainText("")
         self.widgets["post_hashtag"].setPlainText("")
         self.widgets["label_current"].setPlainText("")
-        self.widgets["label_blank"].setValue(0)
+        # self.widgets["label_blank"].setValue(0)
 
     def refresh(self):
         current_tag = self._get_current_tag()
@@ -404,7 +405,8 @@ class Labeler(QMainWindow):
         self.widgets["post_slider"].setValue(0)
         # set Post Text
         self.widgets["post_text"].setText(
-            self._process_post(post)
+            # self._process_post(post)
+            post
         )
         # set Hashtag
         self.widgets["post_hashtag"].setText(othertags)
@@ -438,13 +440,13 @@ class Labeler(QMainWindow):
     def _get_blank_id(self):
         current_tag = self._get_current_tag()
         if current_tag == self.TAG_BASE:
-            self.widgets['label_blank'].setValue(0)
+            self.widgets["label_blank"].setValue(0)
         else:
             ids = self.get_avaiable_ids(current_tag)
             for i in sorted(ids):
                 if self.label_container.get(i) is None:
                     break
-            self.widgets['label_blank'].setValue(i)
+            self.widgets["label_blank"].setValue(i)
 
     def _tags_clicked(self, value: str):
         self.status_bar.showMessage(f"tag: {value} Selected")
@@ -453,17 +455,21 @@ class Labeler(QMainWindow):
         else:
             self.load_label_container(value)
             # get first id
-            sql = f"""SELECT MIN(id) FROM {self.db.table_name}
+            sql = f"""SELECT MIN(id), MAX(id) FROM {self.db.table_name}
                 WHERE tag='{value}'
                 """
             res = self.c.execute(sql).fetchone()
             if res:
                 first_id = res[0]
+                max_id = res[1]
+                self.widgets["label_blank"].setMinimum(first_id)
+                self.widgets["label_blank"].setMaximum(max_id)                
                 self.load_data(first_id)
                 self.status_bar.showMessage("")
             else:
                 self.status_bar.showMessage("Data is not exists.")
             self._get_blank_id()
+
 
     def _set_post_img_label(self, imgs: bytes):
         r"""Please always return to `self.imgs`"""
