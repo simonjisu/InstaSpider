@@ -360,6 +360,7 @@ class Labeler(QMainWindow):
                 if reply == QMessageBox.Yes:
                     for k, v in data.items():
                         self.label_container[k] = v
+                    self._show_progress()
                     self.status_bar.showMessage(f"Loaded(Overwrited) {f_path.name}")
                 else:
                     self.status_bar.showMessage(f"Not Loaded the file {f_path.name}")
