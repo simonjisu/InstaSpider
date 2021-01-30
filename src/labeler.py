@@ -189,7 +189,7 @@ class Labeler(QMainWindow):
         current_label.setAlignment(Qt.AlignCenter)
         vbox_label.addWidget(current_label)
         self.widgets["label_current"] = QTextBrowser()
-        self.widgets["label_current"].setFixedSize(90, 30)
+        self.widgets["label_current"].setFixedSize(120, 30)
         self.widgets['label_current'].setAlignment(Qt.AlignCenter)
         vbox_label.addWidget(self.widgets["label_current"])
         vbox_label.setAlignment(Qt.AlignCenter)
@@ -622,8 +622,11 @@ class Labeler(QMainWindow):
 
     def _update_progress(self):
         current_id = self._get_current_post_id()
+        current_tag = self._get_current_tag()
         current_label = self.label_container.get(current_id)
-        item = self.widgets["label_list"].item(current_id-1)
+        ids = self.get_avaiable_ids(current_tag)
+        idx = ids.index(current_id)
+        item = self.widgets["label_list"].item(idx)
         if current_label is None:
             item.setText(self.label_fmt.format(current_id, ""))
         else:
