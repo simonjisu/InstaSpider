@@ -405,8 +405,7 @@ class Labeler(QMainWindow):
         self.widgets["post_slider"].setValue(0)
         # set Post Text
         self.widgets["post_text"].setText(
-            # self._process_post(post)
-            post
+            self._process_post(post)
         )
         # set Hashtag
         self.widgets["post_hashtag"].setText(othertags)
