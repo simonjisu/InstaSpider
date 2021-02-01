@@ -155,12 +155,13 @@ class Labeler(QMainWindow):
 
     def create_labeler(self):
         # Label
-        btn_labels = ["AA", "AR", "RA", "RR"]
-        btn_locations = [(0, 0), (0, 1), (1, 0), (1, 1)]
-        btn_shortcut_key = [("T", Qt.Key_T), ("Y", Qt.Key_Y), ("G", Qt.Key_G), ("H", Qt.Key_H)]
+        btn_labels = ["AA", "AR", "RA", "RR", "NA"]
+        btn_locations = [(0, 0), (0, 1), (1, 0), (1, 1), (0, 2)]
+        btn_shortcut_key = [("T", Qt.Key_T), ("Y", Qt.Key_Y), ("G", Qt.Key_G), ("H", Qt.Key_H), ("U", Qt.Key_U)]
         btn_links = [
             self._btn_AA_clicked, self._btn_AR_clicked, 
-            self._btn_RA_clicked, self._btn_RR_clicked
+            self._btn_RA_clicked, self._btn_RR_clicked,
+            self._btn_NA_clicked,
         ]
         for l, link, (key_name, key) in zip(btn_labels, btn_links, btn_shortcut_key):
             self.widgets[f"btn_{l}"] = QPushButton(f"{l}({key_name})", self)
@@ -193,7 +194,17 @@ class Labeler(QMainWindow):
         self.widgets['label_current'].setAlignment(Qt.AlignCenter)
         vbox_label.addWidget(self.widgets["label_current"])
         vbox_label.setAlignment(Qt.AlignCenter)
-        
+
+        # Postlink
+        vbox_postlink_id = QVBoxLayout()
+        self.widgets["link_current"] = QTextBrowser()
+        self.widgets["link_current"].setFixedSize(120, 30)
+        self.widgets["uid_current"] = QTextBrowser()
+        self.widgets["uid_current"].setFixedSize(120, 30)
+        vbox_postlink_id.addWidget(self.widgets["link_current"])
+        vbox_postlink_id.addWidget(self.widgets["uid_current"])
+        vbox_postlink_id.setAlignment(Qt.AlignCenter)
+
         # Jump to
         hbox_jump = QHBoxLayout()
         vbox_jump = QVBoxLayout()
@@ -225,9 +236,10 @@ class Labeler(QMainWindow):
         hbox.addLayout(layout_grid)
         hbox.addWidget(self.widgets["btn_prev"])
         hbox.addWidget(self.widgets["btn_next"])
-        hbox.addLayout(vbox_label)
         hbox.addWidget(self.widgets["btn_del"])
-        hbox.addStretch(2)
+        hbox.addLayout(vbox_label)
+        hbox.addLayout(vbox_postlink_id)
+        hbox.addStretch(1)
         hbox.addLayout(hbox_jump)
         hbox.setAlignment(Qt.AlignLeft)
         return hbox
@@ -261,6 +273,7 @@ class Labeler(QMainWindow):
         self.widgets["post_id"].setAlignment(Qt.AlignCenter)
 
         self.widgets["post_text"] = QTextBrowser()
+        self.widgets["post_text"].setFontPointSize(12)
         self.widgets["post_text"].setAcceptRichText(True)
         self.widgets["post_text"].setFont(QFont("arial"))
 
@@ -395,10 +408,15 @@ class Labeler(QMainWindow):
         else:
             self.widgets["label_current"].setText("")
 
-        sql = f"""SELECT post, imgs, othertags FROM {self.db.table_name}
+        sql = f"""SELECT uid, postlink, post, imgs, othertags FROM {self.db.table_name}
             WHERE id={db_id}
             """
-        post, imgs, othertags = self.c.execute(sql).fetchone()
+        uid, link, post, imgs, othertags = self.c.execute(sql).fetchone()
+        # set Post link
+        self.widgets["link_current"].setText(link)
+        # set Post link
+        self.widgets["uid_current"].setText(str(uid))
+
         # set Image
         self.imgs = self._set_post_img_label(imgs)
         self.widgets["post_img_label"].setPixmap(
@@ -444,10 +462,10 @@ class Labeler(QMainWindow):
             self.widgets["label_blank"].setValue(0)
         else:
             ids = self.get_avaiable_ids(current_tag)
-            for i in sorted(ids):
-                if self.label_container.get(i) is None:
+            for idx in sorted(ids):
+                if self.label_container.get(idx) is None:
                     break
-            self.widgets["label_blank"].setValue(i)
+            self.widgets["label_blank"].setValue(idx)
 
     def _tags_clicked(self, value: str):
         self.status_bar.showMessage(f"tag: {value} Selected")
@@ -547,6 +565,18 @@ class Labeler(QMainWindow):
 
     def _btn_RR_clicked(self):
         txt = "RR"
+        current_tag = self._get_current_tag()
+        if current_tag == self.TAG_BASE:
+            pass
+        else:
+            self.widgets["label_current"].setText(txt)
+            current_id = self._get_current_post_id()
+            self.label_container[current_id] = txt
+            self.status_bar.showMessage("")
+            self._update_progress()
+
+    def _btn_NA_clicked(self):
+        txt = "NA"
         current_tag = self._get_current_tag()
         if current_tag == self.TAG_BASE:
             pass

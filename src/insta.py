@@ -23,11 +23,12 @@ class Instagram:
     ATTRS_DATE = "c-Yi7"
     ATTRS_POST_TEXT = "C4VMK"
     ATTRS_LIKES = "Nm9Fw"
-    # ATTRS_IMG = "KL4Bh" 
+    # ATTRS_COMMENT = "EtaWk"
     ATTRS_IMG = "FFVAD"
     ATTRS_TAGS = "xil3i"
     ATTRS_ARIA_LABEL = "u7YqG"
     ATTRS_POST_LIST = "Ckrof"
+    INSTA_POST_REPLY_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[3]/div[1]/ul/ul{}/li/ul/li/div/button'
     INSTA_FIRST_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button'
     INSTA_PREV_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button[1]'
     INSTA_NEXT_BTN_XPATH = '//*[@id="react-root"]/section/main/div/div[1]/article/div[2]/div/div[1]/div[2]/div/button[2]'
@@ -242,7 +243,7 @@ class Instagram:
 
     def get_data(self, links: list) -> Generator:
         for i in range(len(links)):
-            post_link = f"https://www.instagram.com/{links[i]}"
+            post_link = f"https://www.instagram.com{links[i]}"
             self.get_link(post_link)
             try:
                 img_loaded_check = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
@@ -256,20 +257,12 @@ class Instagram:
             soup = self.get_soup()
 
             # user_id
-            user_id = hash(soup.find_all(attrs={"class": self.ATTRS_USER_ID})[0].text)
+            user_id = soup.find_all(attrs={"class": self.ATTRS_USER_ID})[0].text
 
             # date
             date = soup.find_all(attrs={"class": self.ATTRS_DATE})[0].find("time").get("datetime")[:10]
             
-            # post_text
-            # TODO: hash the @mention name in the post text
-            x = soup.find_all(attrs={"class": self.ATTRS_POST_TEXT})
-            if x:
-                x = x[0]
-                post_text = " ".join(html.get_text(separator=" ").strip() for html in list(x)[1:-1])
-            else:
-                post_text = " "
-
+            
             # likes
             x = soup.find_all(attrs={"class": self.ATTRS_LIKES})
             number_text = re.findall("[0-9]", x[0].text) if x else False
@@ -296,14 +289,43 @@ class Instagram:
                     if img_link:
                         imgs.append(self.get_byte_img(img_link))
 
-            imgs = self.IMG_SPLIT_TAG.join(imgs)
-
-            # othertags
-            x = soup.find_all(attrs={"class": self.ATTRS_TAGS})
-            if x:
-                othertags = "".join([t.text for t in x])
+            if len(imgs) == 0:
+                continue
             else:
-                othertags = ""
+                imgs = self.IMG_SPLIT_TAG.join(imgs)
+
+            # Treat all self comment as post, do not open other id's comment
+            f_get_text = lambda html_div: " ".join([html.get_text(separator=" ").strip() for html in list(html_div)[1:-1]])
+            x = soup.find_all(attrs={"class": self.ATTRS_POST_TEXT})
+            post_text = ""
+            if x:
+                for i, html_div in enumerate(x):
+                    
+                    if html_div.find("a").text == user_id:
+                        if i == 0:
+                            continue
+                        if i == 1:
+                            x_path = self.INSTA_POST_REPLY_XPATH.format("")
+                        else:
+                            x_path = self.INSTA_POST_REPLY_XPATH.format(f"[{i}]")
+                        if self.click_button(x_path):
+                            self.click_button(x_path)
+                # post text
+                soup = self.get_soup()
+                x = soup.find_all(attrs={"class": self.ATTRS_POST_TEXT})
+                for html_div in x:
+                    if list(html_div)[0].get_text() == user_id:
+                        post_text += f_get_text(html_div).replace(f"@{user_id}", "")
+                # othertags
+                x = soup.find_all(attrs={"class": self.ATTRS_TAGS})
+                if x:
+                    othertags = " ".join([t.text for t in x])
+                else:
+                    othertags = " "
+
+            else:
+                post_text = " "
+                othertags = " "
             
             # (... postlink TEXT, post TEXT, imgs TEXT, othertags TEXT, uid INTEGER, date TEXT, likes INTEGER)
             temp = [
