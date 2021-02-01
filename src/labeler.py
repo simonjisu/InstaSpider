@@ -330,7 +330,8 @@ class Labeler(QMainWindow):
         
         n = len(self.label_container)
         with path.open("w", encoding="utf-8") as file:
-            for i, (k, v) in enumerate(self.label_container.items(), 1):
+            items = sorted(self.label_container.items(), key=lambda x: x[0])
+            for i, (k, v) in enumerate(items, 1):
                 print(f"{k}\t{v}", file=file)
                 step = int((i/n)*100)
                 pbar.setValue(step)
