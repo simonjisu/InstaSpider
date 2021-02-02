@@ -5,7 +5,9 @@ def get_data(settings_path, tags):
 
     sp = Spider(settings_path)
     sp.main(tags)
-    sp.extract(tags=tags)  # if set it None, will extract all
+    # if you want to extract to folder uncomment below
+    # if set it None, will extract all
+    # sp.extract(tags=tags)
 
 # Query
 def query(settings_path):
