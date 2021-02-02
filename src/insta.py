@@ -152,6 +152,13 @@ class Instagram:
         links = []
         url = f"https://www.instagram.com/explore/tags/{self.parse_tag(tag)}/"
         self.get_link(url)
+        try:
+            page_loaded_check = WebDriverWait(self.driver, self.DRIVER_WAIT_TIME).until(
+                EC.presence_of_element_located((By.CLASS_NAME, self.ATTRS_POSTS))
+            )
+        except:
+            print(f"[INFO] Waiting for loading {url}")
+
         pbar = tqdm(total=self.thres_links)
 
         while len(links) < self.thres_links:
@@ -300,7 +307,6 @@ class Instagram:
             post_text = ""
             if x:
                 for i, html_div in enumerate(x):
-                    
                     if html_div.find("a").text == user_id:
                         if i == 0:
                             continue
@@ -308,7 +314,7 @@ class Instagram:
                             x_path = self.INSTA_POST_REPLY_XPATH.format("")
                         else:
                             x_path = self.INSTA_POST_REPLY_XPATH.format(f"[{i}]")
-                        if self.click_button(x_path):
+                        if self.exists_xpath(x_path):
                             self.click_button(x_path)
                 # post text
                 soup = self.get_soup()
